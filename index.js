@@ -51,6 +51,10 @@ app.get(["/", "/:userid"], async (req, res) => {
     try {
       const user = await client.getRESTUser(userID);
       if (!user) return res.sendStatus(404);
+      if (!user.avatar) {
+        cachedHash.set(user.id, defaultAvatar);
+        return defaultAvatar;
+      };
 
       res.redirect(endpoint(userID, user.avatar, req.query.size));
 

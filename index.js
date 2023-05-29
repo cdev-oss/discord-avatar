@@ -10,7 +10,11 @@ const client = new Client(`Bot ${process.env.DISCORD_TOKEN}`, { restMode: true }
 
 // basic security
 const helmet = require("helmet");
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: {
+    policy: "cross-origin"
+  }
+}));
 
 // ratelimiter
 const {RateLimiterMemory} = require("rate-limiter-flexible");

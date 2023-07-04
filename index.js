@@ -34,10 +34,12 @@ const powerOfTwo = (n) => Math.log2(n) % 1 === 0;
 const defaultAvatar = "https://cdn.discordapp.com/embed/avatars/0.png";
 const endpoint = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${size && !isNaN(size) && powerOfTwo(size) ? size : 4096}`;
 
-app.get(["/", "/:userid"], async (req, res) => {
+app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
+
+app.get("/:userid", async (req, res) => {
   const userID = req.params?.userid;
   if (!userID) {
-    return res.sendStatus(200);
+    return res.status(400).send("user ID is required.");
   };
 
   if (isNaN(userID) || !userID.match(/\d{17,21}/gi)) {

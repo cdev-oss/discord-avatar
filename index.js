@@ -19,12 +19,14 @@ app.use(helmet({
 // ratelimiter
 const {RateLimiterMemory} = require("rate-limiter-flexible");
 const rateLimiter = new RateLimiterMemory({ points: 6, duration: 7.5 });
-app.use((req, res, next) => {
-  consume = rateLimiter.consume(getIP(req), 1)
-  .then(next())
-  .catch(() => {
+app.use(async (req, res, next) => {
+  try {
+    await rateLimiter.consume(getIP(req), 1);
+  } catch {
     return res.sendStatus(429);
-  });
+  };
+
+  next();
 });
 
 // ignore favicon

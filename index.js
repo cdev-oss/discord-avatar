@@ -48,9 +48,11 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(400);
   };
 
+  const cacheValue = `public, max-age=${Math.round(ms("24h") / 1000)}`;
+
   if (cachedHash.has(userID)) {
     const avatarValue = cachedHash.get(userID);
-    return res.redirect(avatarValue !== null ? endpoint(userID, cachedHash.get(userID), req.query.size) : defaultAvatar)
+    return res.set("Cache-Control", cacheValue).redirect(avatarValue !== null ? endpoint(userID, cachedHash.get(userID), req.query.size) : defaultAvatar)
   } else {
     try {
       const user = await client.getRESTUser(userID);
@@ -60,7 +62,7 @@ app.get("/:userid", async (req, res) => {
         return defaultAvatar;
       };
 
-      res.redirect(endpoint(userID, user.avatar, req.query.size));
+      res.set("Cache-Control", cacheValue).redirect(endpoint(userID, user.avatar, req.query.size));
 
       cachedHash.set(user.id, user.avatar);
 

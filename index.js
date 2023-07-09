@@ -58,7 +58,7 @@ app.get("/:userid", async (req, res) => {
       const user = await client.getRESTUser(userID);
       if (!user) return res.sendStatus(404);
       if (!user.avatar) {
-        cachedHash.set(user.id, defaultAvatar);
+        cachedHash.set(user.id, null);
         return defaultAvatar;
       };
 

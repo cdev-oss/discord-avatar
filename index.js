@@ -59,7 +59,7 @@ app.get("/:userid", async (req, res) => {
       if (!user) return res.sendStatus(404);
       if (!user.avatar) {
         cachedHash.set(user.id, null);
-        return defaultAvatar;
+        return res.redirect(defaultAvatar);
       };
 
       res.set("Cache-Control", cacheValue).redirect(endpoint(userID, user.avatar, req.query.size));

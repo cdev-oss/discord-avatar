@@ -59,14 +59,18 @@ app.get("/:userid", async (req, res) => {
       if (!user) return res.sendStatus(404);
       if (!user.avatar) {
         cachedHash.set(user.id, null);
-        return res.redirect(defaultAvatar);
+
+        res.redirect(defaultAvatar);
+
+        setTimeout(() => cachedHash.delete(user.id), ms("15m"));
+
+        return;
       };
 
       res.set("Cache-Control", cacheValue).redirect(endpoint(userID, user.avatar, req.query.size));
 
       cachedHash.set(user.id, user.avatar);
 
-      // cache this for an hour
       setTimeout(() => cachedHash.delete(user.id), ms("1h"));
 
       return;

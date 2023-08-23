@@ -55,7 +55,8 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(400);
   };
 
-  const cacheValue = `public, max-age=${Math.round(ms("24h") / 1000)}`;
+  const fixedTimeCache = ms("1h");
+  const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
 
   if (cachedAvatarURL.has(userID)) {
     const avatarValue = cachedAvatarURL.get(userID);
@@ -73,14 +74,7 @@ app.get("/:userid", async (req, res) => {
 
       cachedAvatarURL.set(user.id, avatar);
 
-        return;
-      };
-
-      res.header("Cache-Control", cacheValue).redirect(endpoint(userID, user.avatar, req.query.size));
-
-      cachedHash.set(user.id, user.avatar);
-
-      setTimeout(() => cachedHash.delete(user.id), ms("1h"));
+      setTimeout(() => cachedAvatarURL.delete(user.id), fixedTimeCache);
 
       return;
     } catch (error) {

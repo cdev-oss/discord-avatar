@@ -1,15 +1,15 @@
 require("dotenv").config();
 // const app = require("express")();
 const PORT = process.env.PORT;
-const cachedHash = new Map();
+const cachedAvatarURL = new Map();
 const ms = require("ms");
 
 const HyperExpress = require('hyper-express');
 const app = new HyperExpress.Server();
 
 // rest
-const {Client} = require("eris");
-const client = new Client(`Bot ${process.env.DISCORD_TOKEN}`, { restMode: true });
+const { Client } = require("oceanic.js");
+let client = new Client({ auth: `Bot ${process.env.DISCORD_TOKEN}` });
 
 // basic security
 const helmet = require("helmet");
@@ -36,8 +36,7 @@ app.use(async (req, res, next) => {
 app.get("/favicon.ico", (_, res) => res.sendStatus(204));
 
 const powerOfTwo = (n) => Math.log2(n) % 1 === 0;
-const defaultAvatar = "https://cdn.discordapp.com/embed/avatars/0.png";
-const endpoint = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${size && !isNaN(size) && powerOfTwo(size) ? size : 4096}`;
+const customAvatarRoute = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${size && !isNaN(size) && powerOfTwo(size) ? size : 4096}`;
 
 app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
 
@@ -58,22 +57,21 @@ app.get("/:userid", async (req, res) => {
 
   const cacheValue = `public, max-age=${Math.round(ms("24h") / 1000)}`;
 
-  if (cachedHash.has(userID)) {
-    const avatarValue = cachedHash.get(userID);
-    return res.header("Cache-Control", cacheValue).redirect(avatarValue !== null ? endpoint(userID, cachedHash.get(userID), req.query.size) : defaultAvatar)
+  if (cachedAvatarURL.has(userID)) {
+    const avatarValue = cachedAvatarURL.get(userID);
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue)
   } else {
     try {
-      const user = await client.getRESTUser(userID).catch(() => {});
-      if (!user) {
+      const user = await client.rest.users.get(userID).catch(() => {});
+      if (!user?.id) {
         return res.sendStatus(404);
       };
-      
-      if (!user.avatar) {
-        cachedHash.set(user.id, null);
 
-        res.redirect(defaultAvatar);
+      const avatar = user?.avatar ? customAvatarRoute(user.id, user.avatar, req?.query?.size) : user.defaultAvatarURL();
 
-        setTimeout(() => cachedHash.delete(user.id), ms("15m"));
+      res.header("Cache-Control", cacheValue).redirect(avatar);
+
+      cachedAvatarURL.set(user.id, avatar);
 
         return;
       };
@@ -100,8 +98,17 @@ function getIP(req) {
     req.socket.remoteAddress;
 };
 
-(async () => {
+async function startServer() {
+  client = await client.restMode(false);
+  
+
+  client
+  .on("error", (error) => console.error(error))
+  .on("warn", (message) => console.warn(message));
+
   await app.listen(PORT);
 
   return console.log(`Avatar: Ready, with port [${PORT}]`);
-})();
+};
+
+startServer();

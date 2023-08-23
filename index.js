@@ -1,8 +1,11 @@
 require("dotenv").config();
-const app = require("express")();
+// const app = require("express")();
 const PORT = process.env.PORT;
 const cachedHash = new Map();
 const ms = require("ms");
+
+const HyperExpress = require('hyper-express');
+const app = new HyperExpress.Server();
 
 // rest
 const {Client} = require("eris");
@@ -52,11 +55,14 @@ app.get("/:userid", async (req, res) => {
 
   if (cachedHash.has(userID)) {
     const avatarValue = cachedHash.get(userID);
-    return res.set("Cache-Control", cacheValue).redirect(avatarValue !== null ? endpoint(userID, cachedHash.get(userID), req.query.size) : defaultAvatar)
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue !== null ? endpoint(userID, cachedHash.get(userID), req.query.size) : defaultAvatar)
   } else {
     try {
-      const user = await client.getRESTUser(userID);
-      if (!user) return res.sendStatus(404);
+      const user = await client.getRESTUser(userID).catch(() => {});
+      if (!user) {
+        return res.sendStatus(404);
+      };
+      
       if (!user.avatar) {
         cachedHash.set(user.id, null);
 
@@ -67,7 +73,7 @@ app.get("/:userid", async (req, res) => {
         return;
       };
 
-      res.set("Cache-Control", cacheValue).redirect(endpoint(userID, user.avatar, req.query.size));
+      res.header("Cache-Control", cacheValue).redirect(endpoint(userID, user.avatar, req.query.size));
 
       cachedHash.set(user.id, user.avatar);
 
@@ -81,10 +87,6 @@ app.get("/:userid", async (req, res) => {
   };
 });
 
-app.listen(PORT, () => {
-  console.log(`Avatar: Ready, with port [${PORT}]`);
-});
-
 function getIP(req) {
   return String(req.headers['cf-connecting-ip'] || "") ||
     String(req.headers['x-forwarded-for'] || "").replace(/:\d+$/, '') ||
@@ -92,3 +94,9 @@ function getIP(req) {
     req.connection.remoteAddress ||
     req.socket.remoteAddress;
 };
+
+(async () => {
+  await app.listen(PORT);
+
+  return console.log(`Avatar: Ready, with port [${PORT}]`);
+})();

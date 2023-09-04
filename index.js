@@ -32,7 +32,21 @@ const sizeLogic = (size) => {
   return (!size || isNaN(size) || !powerOfTwo(size)) ? 4096 : size;
 };
 
-const customAvatarRoute = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${sizeLogic(size)}`;
+const extensionLogic = (hash, type) => {
+  const supportedType = ["png", "jpeg", "jpg", "webp", "gif"];
+  
+  if (!type?.length || !supportedType?.includes(type?.toLowerCase())) {
+    if (!hash?.length) {
+      return "png";
+    };
+
+    return hash.startsWith("a_") ? "gif" : "png";
+  };
+
+  return type;
+};
+
+const customAvatarRoute = (userID, hash, size, extension) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${extensionLogic(hash, extension)}?size=${sizeLogic(size)}`;
 
 const defaultAvatarRoute = (userID) => {
   const mod = userID ? (userID >> 22) % 6 : 0;
@@ -67,7 +81,7 @@ app.get("/:userid", async (req, res) => {
 
   if (cachedAvatarHash.has(userID)) {
     const avatarValue = cachedAvatarHash.get(userID);
-    return res.header("Cache-Control", cacheValue).redirect(avatarValue ? customAvatarRoute(userID, avatarValue, req?.query?.size) : defaultAvatarRoute(userID));
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
   } else {
     try {
       const user = await client.rest.users.get(userID).catch(() => {});
@@ -77,7 +91,7 @@ app.get("/:userid", async (req, res) => {
 
       const avatar = user?.avatar || null;
 
-      res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size) : defaultAvatarRoute(userID));
+      res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
 
       cachedAvatarHash.set(user.id, avatar);
 

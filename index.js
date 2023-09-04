@@ -27,7 +27,13 @@ const rateLimiter = new RateLimiterMemory({ points: 6, duration: 7.5 });
 app.get("/favicon.ico", (_, res) => res.sendStatus(204));
 
 const powerOfTwo = (n) => Math.log2(n) % 1 === 0;
-const customAvatarRoute = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${size && !isNaN(size) && powerOfTwo(size) ? size : 4096}`;
+
+const sizeLogic = (size) => {
+  return (!size || isNaN(size) || !powerOfTwo(size)) ? 4096 : size;
+};
+
+const customAvatarRoute = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${sizeLogic(size)}`;
+
 
 app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
 

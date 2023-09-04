@@ -67,7 +67,7 @@ app.get("/:userid", async (req, res) => {
 
   if (cachedAvatarHash.has(userID)) {
     const avatarValue = cachedAvatarHash.get(userID);
-    return res.header("Cache-Control", cacheValue).redirect(avatarValue ? customAvatarRoute(user.id, avatarValue, req?.query?.size) : defaultAvatarRoute(userID));
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue ? customAvatarRoute(userID, avatarValue, req?.query?.size) : defaultAvatarRoute(userID));
   } else {
     try {
       const user = await client.rest.users.get(userID).catch(() => {});

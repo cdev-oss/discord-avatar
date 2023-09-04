@@ -34,6 +34,10 @@ const sizeLogic = (size) => {
 
 const customAvatarRoute = (userID, hash, size) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${hash.startsWith("a_") ? "gif" : "png"}?size=${sizeLogic(size)}`;
 
+const defaultAvatarRoute = (userID) => {
+  const mod = userID ? (userID >> 22) % 6 : 0;
+  return `https://cdn.discordapp.com/embed/avatars/${mod}.png`;
+};
 
 app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
 

@@ -1,7 +1,7 @@
 require("dotenv").config();
 // const app = require("express")();
 const PORT = process.env.PORT;
-const cachedAvatarURL = new Map();
+const cachedAvatarHash = new Map();
 const ms = require("ms");
 
 const HyperExpress = require('hyper-express');
@@ -65,9 +65,9 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(429);
   };
 
-  if (cachedAvatarURL.has(userID)) {
-    const avatarValue = cachedAvatarURL.get(userID);
-    return res.header("Cache-Control", cacheValue).redirect(avatarValue)
+  if (cachedAvatarHash.has(userID)) {
+    const avatarValue = cachedAvatarHash.get(userID);
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue ? customAvatarRoute(user.id, avatarValue, req?.query?.size) : defaultAvatarRoute(userID));
   } else {
     try {
       const user = await client.rest.users.get(userID).catch(() => {});
@@ -75,13 +75,13 @@ app.get("/:userid", async (req, res) => {
         return res.sendStatus(404);
       };
 
-      const avatar = user?.avatar ? customAvatarRoute(user.id, user.avatar, req?.query?.size) : user.defaultAvatarURL();
+      const avatar = user?.avatar || null;
 
-      res.header("Cache-Control", cacheValue).redirect(avatar);
+      res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size) : defaultAvatarRoute(userID));
 
-      cachedAvatarURL.set(user.id, avatar);
+      cachedAvatarHash.set(user.id, avatar);
 
-      setTimeout(() => cachedAvatarURL.delete(user.id), fixedTimeCache);
+      setTimeout(() => cachedAvatarHash.delete(user.id), fixedTimeCache);
 
       return;
     } catch (error) {

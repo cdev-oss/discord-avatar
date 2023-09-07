@@ -1,8 +1,17 @@
 require("dotenv").config();
-// const app = require("express")();
 const PORT = process.env.PORT;
-const cachedAvatarHash = new Map();
 const ms = require("ms");
+
+// redis
+const { Redis } = require("ioredis");
+const redis = new Redis({
+  port: process.env.REDIS_PORT,
+  host: process.env.REDIS_HOST,
+  username: process.env.REDIS_USERNAME,
+  password: process.env.REDIS_PASS,
+});
+
+redis.on("ready", () => console.log("Redis: Ready."));
 
 const HyperExpress = require('hyper-express');
 const app = new HyperExpress.Server();
@@ -46,6 +55,8 @@ const extensionLogic = (hash, type) => {
   return type;
 };
 
+const cacheKey = (userID) => `cached-discord-avatar-${userID}`;
+
 const customAvatarRoute = (userID, hash, size, extension) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${extensionLogic(hash, extension)}?size=${sizeLogic(size)}`;
 
 const defaultAvatarRoute = (userID) => {
@@ -79,9 +90,10 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(429);
   };
 
-  if (cachedAvatarHash.has(userID)) {
-    const avatarValue = cachedAvatarHash.get(userID);
-    return res.header("Cache-Control", cacheValue).redirect(avatarValue ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
+  const cachedAvatarHash = await redis.hexists(cacheKey(userID), "hash");
+  if (cachedAvatarHash === 1) {
+    const avatarValue = await redis.hget(cacheKey(userID), "hash");
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue?.length ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
   } else {
     try {
       const user = await client.rest.users.get(userID).catch(() => {});
@@ -89,13 +101,15 @@ app.get("/:userid", async (req, res) => {
         return res.sendStatus(404);
       };
 
-      const avatar = user?.avatar || null;
+      const avatar = user?.avatar || "";
 
       res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
 
-      cachedAvatarHash.set(user.id, avatar);
+      await redis.hset(cacheKey(user.id), {
+        "hash": avatar
+      });
 
-      setTimeout(() => cachedAvatarHash.delete(user.id), fixedTimeCache);
+      setTimeout(() => redis.hdel(cacheKey(user.id), "hash"), fixedTimeCache);
 
       return;
     } catch (error) {

@@ -90,20 +90,11 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(429);
   };
 
-  const cachedAvatarHash = await redis.hexists(cacheKey(userID), "hash");
+  const cachedAvatarHash = await redis.exists(cacheKey(userID));
   if (cachedAvatarHash === 1) {
-    const avatarValue = await redis.hget(cacheKey(userID), "hash");
+    const avatarValue = await redis.get(cacheKey(userID));
     
-    res.header("Cache-Control", cacheValue).redirect(avatarValue?.length ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
-
-    const expiration = await redis.hget(cacheKey(userID), "ttl");
-    if (!expiration?.length) {
-      return setTimeout(() => redis.hdel(cacheKey(user.id), ["hash", "ttl"]), fixedTimeCache);
-    };
-
-    if (Date.now() >= new Date(expiration).getTime()) {
-      return await redis.hdel(cacheKey(user.id), ["hash", "ttl"]);
-    };
+    return res.header("Cache-Control", cacheValue).redirect(avatarValue?.length ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
   } else {
     try {
       const user = await client.rest.users.get(userID).catch(() => {});
@@ -115,12 +106,7 @@ app.get("/:userid", async (req, res) => {
 
       res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
 
-      await redis.hset(cacheKey(user.id), {
-        "hash": avatar,
-        "ttl": Date.now() + ms("1h")
-      });
-
-      setTimeout(() => redis.hdel(cacheKey(user.id), ["hash", "ttl"]), fixedTimeCache);
+      await redis.set(cacheKey(user.id), avatar, "EX", Math.round(fixedTimeCache / 1000));
 
       return;
     } catch (error) {

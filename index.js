@@ -104,11 +104,9 @@ app.get("/:userid", async (req, res) => {
 
       const avatar = user?.avatar || "";
 
-      res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
-
       await redis.set(cacheKey(user.id), avatar, "EX", Math.round(fixedTimeCache / 1000));
 
-      return;
+      return res.header("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
     } catch (error) {
       console.error(error);
       return res.sendStatus(502);

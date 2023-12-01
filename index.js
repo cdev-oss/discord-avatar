@@ -37,7 +37,7 @@ const ipAddresses = {};
 const requestIp = require("request-ip");
 
 // ignore favicon
-app.get("/favicon.ico", (_, res) => res.sendStatus(204));
+app.get("/favicon.ico", (_, res) => res.setHeader("Cache-Control", `public, max-age=${Math.round(ms("30d") / 1000)}`).sendStatus(204));
 
 app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar", 301))
 

@@ -51,9 +51,6 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(400);
   };
 
-  const fixedTimeCache = ms("1h");
-  const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
-
   // ratelimiting check
   const currentRequestIP = requestIp.getClientIp(req);
   if (!currentRequestIP?.length) {
@@ -72,6 +69,9 @@ app.get("/:userid", async (req, res) => {
   };
 
   try {
+    const fixedTimeCache = ms("1h");
+    const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
+    
     const cachedAvatarHash = await redis.exists(cacheKey(userID));
     if (cachedAvatarHash === 1) {
       const avatarValue = await redis.get(cacheKey(userID));

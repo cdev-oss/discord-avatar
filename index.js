@@ -71,7 +71,7 @@ app.get("/:userid", async (req, res) => {
   try {
     const fixedTimeCache = ms("1h");
     const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
-    
+
     const cachedAvatarHash = await redis.exists(cacheKey(userID));
     if (cachedAvatarHash === 1) {
       const avatarValue = await redis.get(cacheKey(userID));
@@ -95,17 +95,12 @@ app.get("/:userid", async (req, res) => {
   };
 });
 
-async function startServer() {
+app.listen(PORT, async () => {
   client = await client.restMode(false);
   
-
   client
   .on("error", (error) => console.error(error))
   .on("warn", (message) => console.warn(message));
 
-  await app.listen(PORT);
-
-  return console.log(`Avatar: Ready, with port [${PORT}]`);
-};
-
-startServer();
+  return console.log(`Avatar: Ready, with port [${PORT}]`)
+});

@@ -15,8 +15,8 @@ const redis = new Redis({
 
 redis.on("ready", () => console.log("Redis: Ready."));
 
-const HyperExpress = require('hyper-express');
-const app = new HyperExpress.Server();
+const Express = require('express');
+const app = new Express();
 
 // rest
 const { Client } = require("oceanic.js");

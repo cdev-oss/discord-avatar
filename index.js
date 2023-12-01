@@ -31,8 +31,7 @@ app.use(helmet({
 }));
 
 // ratelimiter
-const {RateLimiterMemory} = require("rate-limiter-flexible");
-const rateLimiter = new RateLimiterMemory({ points: 6, duration: 7.5 });
+const ipAddresses = {};
 
 // request ip
 const requestIp = require("request-ip");
@@ -55,15 +54,21 @@ app.get("/:userid", async (req, res) => {
   const fixedTimeCache = ms("1h");
   const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
 
-  try {
-    const currentRequestIP = requestIp.getClientIp(req);
-    if (!currentRequestIP?.length) {
-      return res.sendStatus(403);
-    };
+  // ratelimiting check
+  const currentRequestIP = requestIp.getClientIp(req);
+  if (!currentRequestIP?.length) {
+    return res.sendStatus(403);
+  };
 
-    await rateLimiter.consume(currentRequestIP, 1);
-  } catch {
+  if (ipAddresses?.[currentRequestIP] > 2) {
     return res.sendStatus(429);
+  };
+
+  if (!ipAddresses?.[currentRequestIP]) {
+    ipAddresses[currentRequestIP] = 1;
+    setTimeout(() => delete ipAddresses[currentRequestIP], ms("1m"));
+  } else {
+    ipAddresses[currentRequestIP]++;
   };
 
   try {

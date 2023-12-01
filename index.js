@@ -39,11 +39,6 @@ app.get("/favicon.ico", (_, res) => res.sendStatus(204));
 
 app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
 
-app.set_error_handler((req, res, error) => {
-  console.error(error);
-  return res.sendStatus(502);
-})
-
 app.get("/:userid", async (req, res) => {
   const userID = req.params?.userid;
   if (!userID) {

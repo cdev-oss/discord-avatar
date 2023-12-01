@@ -1,6 +1,8 @@
 require("dotenv").config();
+
 const PORT = process.env.PORT;
 const ms = require("ms");
+const { cacheKey, customAvatarRoute, defaultAvatarRoute } = require('./util');
 
 // redis
 const { Redis } = require("ioredis");
@@ -34,35 +36,6 @@ const rateLimiter = new RateLimiterMemory({ points: 6, duration: 7.5 });
 
 // ignore favicon
 app.get("/favicon.ico", (_, res) => res.sendStatus(204));
-
-const powerOfTwo = (n) => Math.log2(n) % 1 === 0;
-
-const sizeLogic = (size) => {
-  return (!size || isNaN(size) || !powerOfTwo(size)) ? 4096 : size;
-};
-
-const extensionLogic = (hash, type) => {
-  const supportedType = ["png", "jpeg", "jpg", "webp", "gif"];
-  
-  if (!type?.length || !supportedType?.includes(type?.toLowerCase())) {
-    if (!hash?.length) {
-      return "png";
-    };
-
-    return hash.startsWith("a_") ? "gif" : "png";
-  };
-
-  return type;
-};
-
-const cacheKey = (userID) => `cached-discord-avatar-${userID}`;
-
-const customAvatarRoute = (userID, hash, size, extension) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${extensionLogic(hash, extension)}?size=${sizeLogic(size)}`;
-
-const defaultAvatarRoute = (userID) => {
-  const mod = userID ? (userID >> 22) % 6 : 0;
-  return `https://cdn.discordapp.com/embed/avatars/${mod}.png`;
-};
 
 app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
 

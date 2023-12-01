@@ -76,7 +76,11 @@ app.get("/:userid", async (req, res) => {
     if (cachedAvatarHash === 1) {
       const avatarValue = await redis.get(cacheKey(userID));
       
-      return res.setHeader("Cache-Control", cacheValue).redirect(avatarValue?.length ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
+      return res.setHeader("Cache-Control", cacheValue).redirect(
+        avatarValue?.length ?
+        customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : 
+        defaultAvatarRoute(userID)
+      );
     };
     
     const user = await client.rest.users.get(userID).catch(() => {});
@@ -88,7 +92,11 @@ app.get("/:userid", async (req, res) => {
 
     await redis.set(cacheKey(user.id), avatar, "EX", Math.round(fixedTimeCache / 1000));
 
-    return res.setHeader("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
+    return res.setHeader("Cache-Control", cacheValue).redirect(
+      avatar?.length ?
+      customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) :
+      defaultAvatarRoute(userID)
+    );
   } catch (error) {
     console.error(error);
     return res.sendStatus(502);

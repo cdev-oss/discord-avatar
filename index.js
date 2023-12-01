@@ -58,27 +58,27 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(429);
   };
 
-  const cachedAvatarHash = await redis.exists(cacheKey(userID));
-  if (cachedAvatarHash === 1) {
-    const avatarValue = await redis.get(cacheKey(userID));
-    
-    return res.setHeader("Cache-Control", cacheValue).redirect(avatarValue?.length ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
-  } else {
-    try {
-      const user = await client.rest.users.get(userID).catch(() => {});
-      if (!user?.id) {
-        return res.sendStatus(404);
-      };
-
-      const avatar = user?.avatar || "";
-
-      await redis.set(cacheKey(user.id), avatar, "EX", Math.round(fixedTimeCache / 1000));
-
-      return res.setHeader("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
-    } catch (error) {
-      console.error(error);
-      return res.sendStatus(502);
+  try {
+    const cachedAvatarHash = await redis.exists(cacheKey(userID));
+    if (cachedAvatarHash === 1) {
+      const avatarValue = await redis.get(cacheKey(userID));
+      
+      return res.setHeader("Cache-Control", cacheValue).redirect(avatarValue?.length ? customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
     };
+    
+    const user = await client.rest.users.get(userID).catch(() => {});
+    if (!user?.id) {
+      return res.sendStatus(404);
+    };
+
+    const avatar = user?.avatar || "";
+
+    await redis.set(cacheKey(user.id), avatar, "EX", Math.round(fixedTimeCache / 1000));
+
+    return res.setHeader("Cache-Control", cacheValue).redirect(avatar ? customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID));
+  } catch (error) {
+    console.error(error);
+    return res.sendStatus(502);
   };
 });
 

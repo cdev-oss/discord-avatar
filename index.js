@@ -39,7 +39,7 @@ const requestIp = require("request-ip");
 // ignore favicon
 app.get("/favicon.ico", (_, res) => res.sendStatus(204));
 
-app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar"))
+app.get("/", (_, res) => res.redirect("https://github.com/cdev-oss/discord-avatar", 301))
 
 app.get("/:userid", async (req, res) => {
   const userID = req.params?.userid;

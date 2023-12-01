@@ -34,6 +34,9 @@ app.use(helmet({
 const {RateLimiterMemory} = require("rate-limiter-flexible");
 const rateLimiter = new RateLimiterMemory({ points: 6, duration: 7.5 });
 
+// request ip
+const requestIp = require("request-ip");
+
 // ignore favicon
 app.get("/favicon.ico", (_, res) => res.sendStatus(204));
 
@@ -53,7 +56,12 @@ app.get("/:userid", async (req, res) => {
   const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
 
   try {
-    await rateLimiter.consume(getIP(req), 1);
+    const currentRequestIP = requestIp.getClientIp(req);
+    if (!currentRequestIP?.length) {
+      return res.sendStatus(403);
+    };
+
+    await rateLimiter.consume(currentRequestIP, 1);
   } catch {
     return res.sendStatus(429);
   };
@@ -81,14 +89,6 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(502);
   };
 });
-
-function getIP(req) {
-  return String(req.headers['cf-connecting-ip'] || "") ||
-    String(req.headers['x-forwarded-for'] || "").replace(/:\d+$/, '') ||
-    req.ip ||
-    req.connection.remoteAddress ||
-    req.socket.remoteAddress;
-};
 
 async function startServer() {
   client = await client.restMode(false);

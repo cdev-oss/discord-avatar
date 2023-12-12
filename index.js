@@ -4,16 +4,8 @@ const PORT = process.env.PORT;
 const ms = require("ms");
 const { cacheKey, customAvatarRoute, defaultAvatarRoute } = require('./util');
 
-// redis
-const { Redis } = require("ioredis");
-const redis = new Redis({
-  port: process.env.REDIS_PORT,
-  host: process.env.REDIS_HOST,
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASS,
-});
-
-redis.on("ready", () => console.log("Redis: Ready."));
+// cache
+const cache = new Map();
 
 const Express = require('express');
 const app = new Express();
@@ -73,9 +65,9 @@ app.get("/:userid", async (req, res) => {
     const fixedTimeCache = ms("1h");
     const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
 
-    const cachedAvatarHash = await redis.exists(cacheKey(userID));
-    if (cachedAvatarHash === 1) {
-      const avatarValue = await redis.get(cacheKey(userID));
+    const cachedAvatarHash = cache.has(cacheKey(userID));
+    if (cachedAvatarHash) {
+      const avatarValue = cache.get(cacheKey(userID));
       
       return res.setHeader("Cache-Control", cacheValue).redirect(
         avatarValue?.length ?
@@ -91,7 +83,7 @@ app.get("/:userid", async (req, res) => {
 
     const avatar = user?.avatar || "";
 
-    await redis.set(cacheKey(user.id), avatar, "EX", Math.round(fixedTimeCache / 1000));
+    cache.set(cacheKey(user.id), avatar);
 
     return res.setHeader("Cache-Control", cacheValue).redirect(
       avatar?.length ?

@@ -2,7 +2,7 @@ require("dotenv/config");
 
 const PORT = process.env.PORT;
 const ms = require("ms");
-const { cacheKey, customAvatarRoute, defaultAvatarRoute } = require('./util');
+const { customAvatarRoute, defaultAvatarRoute } = require('./util');
 
 // cache
 const cache = new Map();
@@ -84,6 +84,7 @@ app.get("/:userid", async (req, res) => {
     const avatar = user?.avatar || "";
 
     cache.set(user.id, avatar);
+    setTimeout(() => cache.delete(user.id), fixedTimeCache)
 
     return res.setHeader("Cache-Control", cacheValue).redirect(
       avatar?.length ?

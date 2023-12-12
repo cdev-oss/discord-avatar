@@ -32,6 +32,7 @@ app.use(helmet({
 
 // ratelimiter
 const ipAddresses = {};
+const rateLimitThreshold = 25;
 
 // request ip
 const requestIp = require("request-ip");
@@ -57,7 +58,7 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(403);
   };
 
-  if (ipAddresses?.[currentRequestIP] > 2) {
+  if (ipAddresses?.[currentRequestIP] > rateLimitThreshold) {
     return res.sendStatus(429);
   };
 

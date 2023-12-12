@@ -18,8 +18,6 @@ const extensionLogic = (hash, type) => {
   return type;
 };
 
-module.exports.cacheKey = (userID) => `cached-discord-avatar-${userID}`;
-
 module.exports.customAvatarRoute = (userID, hash, size, extension) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${extensionLogic(hash, extension)}?size=${sizeLogic(size)}`;
 
 module.exports.defaultAvatarRoute = (userID) => {

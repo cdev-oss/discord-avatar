@@ -65,9 +65,9 @@ app.get("/:userid", async (req, res) => {
     const fixedTimeCache = ms("1h");
     const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
 
-    const cachedAvatarHash = cache.has(cacheKey(userID));
+    const cachedAvatarHash = cache.has(userID);
     if (cachedAvatarHash) {
-      const avatarValue = cache.get(cacheKey(userID));
+      const avatarValue = cache.get(userID);
       
       return res.setHeader("Cache-Control", cacheValue).redirect(
         avatarValue?.length ?
@@ -83,7 +83,7 @@ app.get("/:userid", async (req, res) => {
 
     const avatar = user?.avatar || "";
 
-    cache.set(cacheKey(user.id), avatar);
+    cache.set(user.id, avatar);
 
     return res.setHeader("Cache-Control", cacheValue).redirect(
       avatar?.length ?

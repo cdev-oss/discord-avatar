@@ -21,6 +21,6 @@ const extensionLogic = (hash, type) => {
 module.exports.customAvatarRoute = (userID, hash, size, extension) => `https://cdn.discordapp.com/avatars/${userID}/${hash}.${extensionLogic(hash, extension)}?size=${sizeLogic(size)}`;
 
 module.exports.defaultAvatarRoute = (userID) => {
-  const mod = userID ? (userID >> 22) % 6 : 0;
+  const mod = userID ? Math.abs((userID >> 22) % 6) : 0;
   return `https://cdn.discordapp.com/embed/avatars/${mod}.png`;
 };

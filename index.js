@@ -23,7 +23,7 @@ app.use(helmet({
 }));
 
 // ratelimiter
-const ipAddresses = {};
+const ipAddresses = new Map();
 const rateLimitThreshold = 25;
 
 // request ip
@@ -50,15 +50,16 @@ app.get("/:userid", async (req, res) => {
     return res.sendStatus(403);
   };
 
-  if (ipAddresses?.[currentRequestIP] > rateLimitThreshold) {
-    return res.sendStatus(429);
-  };
-
-  if (!ipAddresses?.[currentRequestIP]) {
-    ipAddresses[currentRequestIP] = 1;
-    setTimeout(() => delete ipAddresses[currentRequestIP], ms("1m"));
+  if (!ipAddresses.has(currentRequestIP)) {
+    ipAddresses.set(currentRequestIP, 1);
+    setTimeout(() => ipAddresses.delete(currentRequestIP), ms("1m"));
   } else {
-    ipAddresses[currentRequestIP]++;
+    const currentCost = ipAddresses.get(currentRequestIP);
+    if (currentCost > rateLimitThreshold) {
+      return res.sendStatus(429);
+    };
+
+    ipAddresses.set(currentRequestIP, currentCost + 1);
   };
 
   try {

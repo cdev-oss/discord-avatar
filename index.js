@@ -3,16 +3,13 @@ require("dotenv/config");
 const PORT = process.env.PORT;
 const ms = require("ms");
 const { customAvatarRoute, defaultAvatarRoute } = require('./util');
+const { fetch } = require("undici");
 
 // cache
 const cache = new Map();
 
 const Express = require('express');
 const app = new Express();
-
-// rest
-const { Client } = require("oceanic.js");
-let client = new Client({ auth: `Bot ${process.env.DISCORD_TOKEN}` });
 
 // basic security
 const helmet = require("helmet");
@@ -64,34 +61,41 @@ app.get("/:userid", async (req, res) => {
 
   try {
     const fixedTimeCache = ms("1h");
-    const cacheValue = `public, max-age=${Math.round(fixedTimeCache / 1000)}`;
 
-    const cachedAvatarHash = cache.has(userID);
-    if (cachedAvatarHash) {
-      const avatarValue = cache.get(userID);
-      
-      return res.setHeader("Cache-Control", cacheValue).redirect(
-        avatarValue?.length ?
-        customAvatarRoute(userID, avatarValue, req?.query?.size, req?.query?.type) : 
-        defaultAvatarRoute(userID)
-      );
+    let avatar = cache.has(userID) ? cache.get(userID) : null;
+    if (!avatar) {
+      const userRequest = await fetch("https://discord.com/api/v10/users/" + userID, {
+        method: "GET",
+        headers: {
+          Authorization: `Bot ${process.env.DISCORD_TOKEN}`
+        }
+      });
+
+      if (userRequest.status >= 400) {
+        return res.status(500).send(`received ${userRequest.status} while fetching user's avatar`);
+      };
+
+      const user = await userRequest.json();
+      if (!user?.id) {
+        return res.status(500).send("received nothing after parsing user's avatar request");
+      };
+
+      const rawAvatar = user?.avatar || "";
+
+      cache.set(user.id, rawAvatar);
+      setTimeout(() => cache.delete(user.id), fixedTimeCache);
+
+      avatar = rawAvatar;
     };
-    
-    const user = await client.rest.users.get(userID).catch(() => {});
-    if (!user?.id) {
-      return res.sendStatus(404);
+
+    const avatarURL = avatar?.length ? customAvatarRoute(userID, avatar, req?.query?.size, req?.query?.type) : defaultAvatarRoute(userID);
+    const rawImageFetch = await fetch(avatarURL, { method: "GET" });
+    if (rawImageFetch.status !== 200) {
+      console.error(`[${rawImageFetch.status}] ${userID}/${avatar}`, await rawImageFetch.text());
+      return res.status(400).send("unable to fetch Discord avatar momentarily");
     };
 
-    const avatar = user?.avatar || "";
-
-    cache.set(user.id, avatar);
-    setTimeout(() => cache.delete(user.id), fixedTimeCache)
-
-    return res.setHeader("Cache-Control", cacheValue).redirect(
-      avatar?.length ?
-      customAvatarRoute(user.id, avatar, req?.query?.size, req?.query?.type) :
-      defaultAvatarRoute(userID)
-    );
+    return res.set("content-type", rawImageFetch?.headers?.get("content-type")).send(Buffer.from(await rawImageFetch.arrayBuffer()));
   } catch (error) {
     console.error(error);
     return res.sendStatus(502);
@@ -99,11 +103,5 @@ app.get("/:userid", async (req, res) => {
 });
 
 app.listen(PORT, async () => {
-  client = await client.restMode(false);
-  
-  client
-  .on("error", (error) => console.error(error))
-  .on("warn", (message) => console.warn(message));
-
-  return console.log(`Avatar: Ready, with port [${PORT}]`)
+  return console.log(`Avatar: Ready, with port [${PORT}]`);
 });

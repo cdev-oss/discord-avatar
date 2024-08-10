@@ -104,3 +104,7 @@ dist
 .tern-port
 
 pnpm-lock.yaml
+.env*
+.flaskenv*
+!.env.project
+!.env.vault
